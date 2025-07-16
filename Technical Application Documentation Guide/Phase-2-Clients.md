@@ -291,27 +291,93 @@ graph TB
 - Limited validation rules (-5)
 - No advanced filtering (-5)
 
+### 📄 Document Upload Capabilities
+
+#### Current Implementation Status ❌
+- **No Direct Document Upload System** - Missing core file upload functionality
+- **Storage Infrastructure** - Basic Supabase storage monitoring exists
+- **Configuration Only** - Portal settings exist for document uploads but no implementation
+
+#### Storage Configuration ⚠️
+- **System Settings** - Max file upload size configurable (10MB dev, 50MB prod)
+- **Portal Settings** - `allowDocumentUpload` toggle in client portal settings
+- **No Storage Buckets** - No dedicated document storage buckets created
+- **No File Management UI** - No interface for managing uploaded documents
+
+#### Missing Document Features ❌
+- **File Upload Components** - No drag-and-drop or file input components
+- **Document Categories** - No system for categorizing documents (intake forms, insurance cards, etc.)
+- **File Validation** - No file type/size validation
+- **Document Versioning** - No version control for updated documents
+- **Access Control** - No role-based document access permissions
+
+#### HIPAA Document Compliance Issues ❌
+- **No Encryption** - Documents not encrypted at rest
+- **No Audit Trail** - No logging of document access/uploads
+- **No Access Controls** - No role-based document permissions
+- **No Retention Policies** - No automatic document purging
+
+### 🌐 Patient Portal Access Setup
+
+#### Current Implementation Status ⚠️
+- **Portal Settings Interface** ✅ - Complete configuration system exists
+- **No Portal Implementation** ❌ - Front-end portal interface missing
+- **No Authentication System** ❌ - No patient login/registration
+
+#### Portal Configuration Features ✅
+- **ClientPortalSettings.tsx** - Comprehensive settings interface
+- **Portal Domain** - Configurable portal domain setting
+- **Feature Toggles** - Enable/disable portal features
+- **Welcome Messages** - Customizable patient welcome messages
+- **Appointment Features** - Self-scheduling and cancellation settings
+- **Document Upload Setting** - Toggle for patient document uploads
+- **Payment Portal** - Enable/disable payment functionality
+
+#### Portal Features Configured But Not Implemented ❌
+- **Self-Scheduling** - Setting exists but no booking interface
+- **Appointment History** - Toggle exists but no patient view
+- **Document Uploads** - Setting exists but no upload interface
+- **Secure Messaging** - Configuration exists but no messaging system
+- **Payment Portal** - Setting exists but no payment interface
+
+#### Missing Portal Infrastructure ❌
+- **Patient Authentication** - No separate auth system for patients
+- **Portal Domain Setup** - No actual portal hosting
+- **Patient Dashboard** - No patient-facing interface
+- **Mobile Responsiveness** - No mobile portal design
+- **Portal Database Tables** - No patient-specific data tables
+
+#### Security Gaps for Portal ❌
+- **No Portal RLS** - No row-level security for patient access
+- **No Patient Permissions** - No role separation between staff and patients
+- **No Session Management** - No portal-specific session handling
+- **No Rate Limiting** - No protection against portal abuse
+
 ### 📋 Implementation Roadmap
 
-#### Phase 1: Critical Security (1-2 weeks)
+#### Phase 1: Critical Security & Document Foundation (1-2 weeks)
 1. Implement audit log viewing UI
 2. Add client access permission management
-3. Enhance data validation rules
+3. Create storage buckets for documents
+4. Implement basic file upload system with encryption
 
 #### Phase 2: Enhanced Functionality (2-3 weeks)
 1. Add client deactivation/deletion UI
 2. Implement advanced filtering system
 3. Create bulk operation capabilities
+4. Build document management interface
 
-#### Phase 3: Analytics and Optimization (2-3 weeks)
-1. Build client metrics dashboard
-2. Add data change history tracking
-3. Implement full-text search
+#### Phase 3: Patient Portal Development (3-4 weeks)
+1. Design patient authentication system
+2. Create patient dashboard interface
+3. Implement self-scheduling functionality
+4. Add secure patient messaging
 
-#### Phase 4: Advanced Features (3-4 weeks)
+#### Phase 4: Advanced Features & Portal Enhancement (3-4 weeks)
 1. Add offline support
 2. Create client merging tools
 3. Implement custom field system
+4. Complete portal payment integration
 
 ### 🔍 Specific Findings
 
