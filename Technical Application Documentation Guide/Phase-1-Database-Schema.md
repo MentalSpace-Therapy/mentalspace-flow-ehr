@@ -1,6 +1,6 @@
 # Phase 1.1: Database Schema Documentation - MagalGenis EHR
 
-## Complete Entity Relationship Diagram
+## Complete Entity Relationship Diagram with Security Status
 
 ```mermaid
 erDiagram
@@ -28,7 +28,7 @@ erDiagram
     clinical_notes ||--o{ note_reminders : "has"
     clinical_notes ||--o{ note_completion_tracking : "tracked"
     
-    %% Scheduling
+    %% Scheduling - CRITICAL: Missing RLS
     users ||--o{ appointments : "provider"
     clients ||--o{ appointments : "patient"
     appointments ||--o{ appointment_conflicts : "has"
@@ -48,6 +48,7 @@ erDiagram
     claims ||--o{ claim_line_items : "contains"
     clients ||--o{ insurance_verifications : "verified"
     clients ||--o{ patient_statements : "billed"
+    payers ||--o{ claims : "payer"
     
     %% Compliance & Audit
     users ||--o{ audit_logs : "performed_action"
@@ -64,7 +65,154 @@ erDiagram
     users ||--o{ aggregated_metrics : "provider"
     clients ||--o{ aggregated_metrics : "client"
     
-    %% System Tables
+    %% System & Configuration
+    users ||--o{ api_logs : "user_action"
+    users ||--o{ rate_limits : "rate_limited"
+    
+    %% Core Entity Definitions
+    users {
+        uuid id PK "🔑 Primary Key"
+        uuid auth_user_id FK "🔗 Supabase Auth"
+        text first_name "✅ PHI"
+        text last_name "✅ PHI" 
+        text email UK "✅ PHI"
+        boolean is_active "Default: true"
+        timestamp created_at "Auto"
+        timestamp updated_at "Auto"
+    }
+    
+    user_roles {
+        uuid id PK
+        uuid user_id FK
+        user_role role "ENUM: Admin, Clinician, etc"
+        boolean is_active "Default: true"
+        timestamp created_at
+    }
+    
+    clients {
+        uuid id PK "🔑 Patient ID"
+        text first_name "✅ PHI"
+        text last_name "✅ PHI"
+        date date_of_birth "✅ PHI"
+        text email "✅ PHI"
+        uuid assigned_clinician_id FK
+        boolean is_active "Default: true"
+        boolean hipaa_signed "Default: false"
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    clinical_notes {
+        uuid id PK
+        uuid provider_id FK
+        uuid client_id FK  
+        text title "✅ PHI"
+        jsonb content "✅ PHI - Clinical Data"
+        note_type note_type "ENUM"
+        note_status status "Default: draft"
+        timestamp signed_at
+        uuid signed_by FK
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    appointments {
+        uuid id PK
+        uuid provider_id FK
+        uuid client_id FK
+        timestamp start_time "✅ PHI"
+        timestamp end_time "✅ PHI"
+        appointment_type appointment_type "ENUM"
+        appointment_status status "Default: scheduled"
+        text notes "✅ PHI"
+        boolean is_recurring "Default: false"
+        timestamp created_at
+    }
+    
+    appointment_reminders {
+        uuid id PK
+        uuid appointment_id FK
+        text reminder_type
+        integer send_before_minutes
+        boolean is_sent "Default: false"
+        timestamp sent_at
+        timestamp created_at
+    }
+    
+    conversations {
+        uuid id PK
+        uuid therapist_id FK
+        uuid client_id FK
+        text title "✅ PHI"
+        text status "Default: active"
+        timestamp last_message_at
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    messages {
+        uuid id PK
+        uuid conversation_id FK
+        uuid sender_id FK
+        text content "✅ PHI"
+        boolean is_read "Default: false"
+        timestamp read_at
+        timestamp created_at
+    }
+    
+    claims {
+        uuid id PK
+        uuid provider_id FK
+        uuid client_id FK
+        uuid payer_id FK
+        text claim_number "✅ PHI"
+        date service_date "✅ PHI"
+        numeric total_amount "✅ PHI"
+        claim_status status "Default: draft"
+        timestamp created_at
+    }
+    
+    hipaa_access_logs {
+        uuid id PK
+        uuid user_id FK
+        uuid patient_id "Patient accessed"
+        text access_type
+        text data_accessed
+        boolean authorized "Default: true"
+        inet ip_address
+        timestamp created_at
+    }
+    
+    audit_logs {
+        uuid id PK
+        uuid user_id FK
+        text action
+        text resource_type  
+        uuid resource_id
+        jsonb details
+        inet ip_address
+        timestamp created_at
+    }
+    
+    client_insurance {
+        uuid id PK
+        uuid client_id FK
+        text insurance_company "✅ PHI"
+        text policy_number "✅ PHI"
+        text group_number "✅ PHI"
+        boolean is_active "Default: true"
+        timestamp created_at
+    }
+    
+    performance_metrics {
+        uuid id PK
+        uuid user_id FK
+        text metric_name
+        numeric metric_value
+        text metric_unit "Default: ms"
+        timestamp created_at
+    }
+    
     query_cache {
         uuid id PK
         text cache_key UK
@@ -74,9 +222,9 @@ erDiagram
     }
     
     rate_limits {
-        uuid id PK
+        uuid id PK  
         text identifier UK
-        integer request_count
+        integer request_count "Default: 1"
         timestamp created_at
         timestamp updated_at
     }
@@ -89,13 +237,36 @@ erDiagram
         integer response_time_ms
         uuid user_id FK
         inet ip_address
-        text user_agent
         jsonb request_body
         jsonb response_body
-        text error_message
         timestamp created_at
     }
 ```
+
+## 🚨 Critical Security Status Legend
+
+**Table Security Status:**
+- 🟢 **Protected** (Has RLS policies)
+- 🔴 **UNPROTECTED** (Missing RLS - CRITICAL)
+- 🟡 **Partial** (Some protection, needs review)
+
+### Security Status by Module:
+
+**🟢 PROTECTED TABLES:**
+- `users`, `user_roles`, `staff_profiles`
+- `clients`, `client_insurance`, `client_diagnoses`
+- `clinical_notes`, `note_versions`
+- `conversations`, `messages`
+- `claims`, `claim_line_items`
+- `hipaa_access_logs`, `audit_logs`
+
+**🔴 UNPROTECTED TABLES (IMMEDIATE ACTION REQUIRED):**
+- `appointments` ⚠️ **Contains PHI - appointment times**
+- `appointment_reminders` ⚠️ **Linked to PHI data**
+
+**🟡 SYSTEM TABLES (Minimal Risk):**
+- `query_cache`, `rate_limits`, `api_logs`
+- `performance_metrics`
 
 ## Complete Table Documentation
 
