@@ -3,6 +3,96 @@
 ## Overview
 The Scheduling Module is a comprehensive appointment management system that provides calendar views, appointment booking, provider scheduling, waitlist management, and reminder functionality. The module is well-architected with robust real-time capabilities and conflict detection.
 
+### System Architecture Overview
+
+<lov-mermaid>
+graph TB
+    subgraph "Scheduling Module Architecture"
+        UI[User Interface Layer]
+        
+        subgraph "Calendar Views"
+            DV[Day View]
+            WV[Week View]
+            MV[Month View]
+            LV[List View]
+        end
+        
+        subgraph "Core Components"
+            AM[Appointment Management]
+            WS[Work Schedule Management]
+            WL[Waitlist Management]
+            SS[Scheduling Settings]
+        end
+        
+        subgraph "Business Logic"
+            CF[Conflict Detection]
+            RT[Real-time Updates]
+            RM[Reminder System]
+            VA[Availability Validation]
+        end
+        
+        subgraph "Data Layer"
+            DB[(Supabase Database)]
+            RT_SUB[Real-time Subscriptions]
+        end
+    end
+    
+    UI --> DV
+    UI --> WV
+    UI --> MV
+    UI --> LV
+    
+    UI --> AM
+    UI --> WS
+    UI --> WL
+    UI --> SS
+    
+    AM --> CF
+    AM --> RT
+    WS --> VA
+    WL --> RM
+    
+    CF --> DB
+    RT --> RT_SUB
+    VA --> DB
+    RM --> DB
+    
+    RT_SUB --> RT
+</lov-mermaid>
+
+### Appointment Booking Workflow
+
+<lov-mermaid>
+sequenceDiagram
+    participant U as User
+    participant AF as Appointment Form
+    participant CD as Conflict Detection
+    participant DB as Database
+    participant RT as Real-time System
+    participant RM as Reminder System
+    
+    U->>AF: Open Create Appointment
+    AF->>AF: Initialize Form Data
+    U->>AF: Select Client & Provider
+    U->>AF: Choose Date & Time
+    AF->>CD: Check for Conflicts
+    CD->>DB: Query Existing Appointments
+    DB->>CD: Return Conflicting Data
+    CD->>AF: Display Conflict Warnings
+    
+    alt No Conflicts
+        U->>AF: Submit Appointment
+        AF->>DB: Create Appointment Record
+        DB->>RT: Trigger Real-time Update
+        RT->>AF: Broadcast to All Clients
+        DB->>RM: Schedule Reminders
+        AF->>U: Show Success Message
+    else Conflicts Found
+        AF->>U: Show Conflict Error
+        U->>AF: Modify Time/Date
+    end
+</lov-mermaid>
+
 ---
 
 ## 2.4.1 Appointment Types and Durations
@@ -59,6 +149,85 @@ The WorkScheduleManagement component provides:
 ### Database Tables
 - **provider_schedules**: Regular weekly schedules
 - **schedule_exceptions**: Date-specific overrides
+
+### Database Relationships
+
+<lov-mermaid>
+erDiagram
+    USERS ||--o{ APPOINTMENTS : "provider_id"
+    CLIENTS ||--o{ APPOINTMENTS : "client_id"
+    USERS ||--o{ PROVIDER_SCHEDULES : "provider_id"
+    USERS ||--o{ SCHEDULE_EXCEPTIONS : "provider_id"
+    RECURRING_SERIES ||--o{ APPOINTMENTS : "recurring_series_id"
+    APPOINTMENTS ||--o{ APPOINTMENT_REMINDERS : "appointment_id"
+    CLIENTS ||--o{ APPOINTMENT_WAITLIST : "client_id"
+    
+    APPOINTMENTS {
+        uuid id PK
+        uuid client_id FK
+        uuid provider_id FK
+        enum appointment_type
+        timestamp start_time
+        timestamp end_time
+        enum status
+        boolean is_recurring
+        uuid recurring_series_id FK
+        text location
+        text room_number
+        text notes
+    }
+    
+    RECURRING_SERIES {
+        uuid id PK
+        enum pattern
+        int interval_value
+        array days_of_week
+        date start_date
+        date end_date
+        int max_occurrences
+    }
+    
+    APPOINTMENT_REMINDERS {
+        uuid id PK
+        uuid appointment_id FK
+        text reminder_type
+        int send_before_minutes
+        boolean is_sent
+        timestamp sent_at
+    }
+    
+    APPOINTMENT_WAITLIST {
+        uuid id PK
+        uuid client_id FK
+        uuid provider_id FK
+        enum appointment_type
+        date preferred_date
+        time preferred_time_start
+        time preferred_time_end
+        int priority
+        boolean is_fulfilled
+        text notes
+    }
+    
+    PROVIDER_SCHEDULES {
+        uuid id PK
+        uuid provider_id FK
+        enum day_of_week
+        time start_time
+        time end_time
+        text status
+    }
+    
+    SCHEDULE_EXCEPTIONS {
+        uuid id PK
+        uuid provider_id FK
+        date exception_date
+        time start_time
+        time end_time
+        text exception_type
+        text notes
+    }
+</lov-mermaid>
 
 ### Current Implementation Status
 ✅ **Implemented**: Basic schedule creation and viewing
